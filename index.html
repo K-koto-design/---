@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>К-Стор: Доставка и Оплата</title>
+    <title>К-Стор: Корзина и Оплата</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -14,7 +14,6 @@
             --white: #FFFFFF;
             --text-dark: #3A3A3A;
             --soft-gray: #D6E4F0;
-            --accent: #3A3A3A;
             --radius-lg: 30px;
             --radius-sm: 18px;
         }
@@ -23,9 +22,10 @@
         body {
             margin: 0; font-family: -apple-system, system-ui, sans-serif;
             background-color: var(--bg-main); color: var(--text-dark);
+            overflow-x: hidden;
         }
 
-        /* --- К-СТОР ИНТЕРФЕЙС --- */
+        /* --- К-СТОР --- */
         .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
         
         .categories {
@@ -34,7 +34,7 @@
         }
         .cat-btn {
             background: var(--white); padding: 12px 20px; border-radius: 20px;
-            white-space: nowrap; font-weight: 600; cursor: pointer; border: none;
+            white-space: nowrap; font-weight: 600; cursor: pointer; border: none; transition: 0.2s;
         }
         .cat-btn.active { background: var(--text-dark); color: var(--white); }
 
@@ -52,44 +52,49 @@
         .card-price { font-weight: 800; font-size: 18px; margin: 8px 0; }
         .add-to-cart {
             background: var(--bg-main); border: none; border-radius: 12px;
-            padding: 10px; font-weight: bold; cursor: pointer;
+            padding: 10px; font-weight: bold; cursor: pointer; width: 100%;
         }
 
-        /* --- КОРЗИНА (НИЖНЯЯ ПАНЕЛЬ) --- */
+        /* --- КОРЗИНА --- */
         .cart-bar {
             position: fixed; bottom: 20px; left: 20px; right: 20px;
             background: var(--text-dark); color: var(--white);
-            border-radius: 20px; padding: 15px 25px;
+            border-radius: 20px; padding: 18px 25px;
             display: none; justify-content: space-between; align-items: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2); z-index: 99;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 99;
         }
 
-        /* --- ЭКРАН ОПЛАТЫ / ВХОДА --- */
+        /* --- МОДАЛЬНОЕ ОКНО --- */
         .modal {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
             backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end;
         }
         .modal-content {
             background: var(--white); width: 100%; border-radius: 30px 30px 0 0;
-            padding: 30px; text-align: center; animation: slideUp 0.3s ease;
+            padding: 30px; animation: slideUp 0.3s ease; max-height: 90vh; overflow-y: auto;
         }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
         input {
-            width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--soft-gray);
+            width: 100%; padding: 16px; border-radius: 15px; border: 2px solid var(--soft-gray);
             font-size: 16px; margin: 15px 0; text-align: center;
         }
         .btn-main {
             width: 100%; padding: 18px; border-radius: 18px; border: none;
             background: var(--bg-main); font-weight: 700; font-size: 16px; cursor: pointer;
         }
+
+        .order-item {
+            display: flex; justify-content: space-between; padding: 10px 0;
+            border-bottom: 1px solid var(--soft-gray); font-size: 15px;
+        }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1 style="margin:0">К-Стор 🥦</h1>
-        <div style="font-size: 24px" onclick="openCart()">🛒</div>
+        <h1 style="margin:0">К-Стор 🧺</h1>
+        <div style="font-size: 24px">🛒</div>
     </div>
 
     <div class="categories" id="cat-list">
@@ -97,65 +102,85 @@
         <button class="cat-btn" onclick="filter('pizza')">🍕 Пицца</button>
         <button class="cat-btn" onclick="filter('rolls')">🍣 Роллы</button>
         <button class="cat-btn" onclick="filter('shaurma')">🌯 Шавуха</button>
-        <button class="cat-btn" onclick="filter('drinks')">☕ Напитки</button>
+        <button class="cat-btn" onclick="filter('drinks')">🥤 Напитки</button>
     </div>
 
     <div class="products" id="product-list"></div>
 
-    <div class="cart-bar" id="cart-bar" onclick="startOrder()">
-        <span>В корзине: <span id="cart-count">0</span></span>
-        <span id="cart-total">0 ₽ ></span>
+    <div class="cart-bar" id="cart-bar" onclick="openAuth()">
+        <span id="cart-info">0 товаров</span>
+        <span id="cart-total" style="font-weight: 700;">0 ₽ ></span>
     </div>
 
     <div class="modal" id="modal-pay">
         <div class="modal-content">
-            <div id="auth-section">
-                <h2>Вход в К-Онлайн</h2>
-                <p style="opacity:0.6">Введите ваш Telegram ID для оплаты</p>
-                <input type="number" id="tg-id-input" placeholder="Например: 6348425176">
-                <button class="btn-main" onclick="authAndPay()">Войти и оплатить</button>
-            </div>
             
-            <div id="status-section" style="display:none">
-                <div style="font-size: 50px" id="status-icon">⏳</div>
-                <h2 id="status-msg">Обработка...</h2>
-                <button class="btn-main" onclick="closeModal()">Закрыть</button>
+            <div id="step-auth" style="text-align: center;">
+                <h2 style="margin-top:0">К-Онлайн</h2>
+                <p style="opacity:0.6">Введите ваш Telegram ID для оплаты заказа</p>
+                <input type="number" id="tg-id-input" placeholder="ID (например: 123456)">
+                <button class="btn-main" onclick="checkUser()">Войти</button>
+                <div style="margin-top: 15px; opacity: 0.5" onclick="closeModal()">Отмена</div>
             </div>
-            <div style="margin-top: 15px; opacity: 0.5" onclick="closeModal()">Отмена</div>
+
+            <div id="step-confirm" style="display:none">
+                <h2 style="margin-top:0; text-align:center;">Ваш заказ</h2>
+                <div id="order-details" style="margin: 20px 0;"></div>
+                
+                <div style="background: var(--soft-gray); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 5px;">
+                        <span>Баланс:</span> <b id="user-balance-val">0 ₽</b>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size: 18px;">
+                        <span>Итого:</span> <b id="order-total-val">0 ₽</b>
+                    </div>
+                </div>
+
+                <button class="btn-main" id="final-pay-btn" onclick="executePayment()">Оплатить сейчас</button>
+                <div style="margin-top: 15px; text-align:center; opacity: 0.5" onclick="closeModal()">Отмена</div>
+            </div>
+
+            <div id="step-success" style="display:none; text-align: center;">
+                <div style="font-size: 60px">✅</div>
+                <h2>Оплачено!</h2>
+                <p>Ваш заказ уже готовится 👨‍🍳</p>
+                <button class="btn-main" onclick="closeModal()">Супер</button>
+            </div>
+
         </div>
     </div>
 
 <script>
-    const config = { 
-        databaseURL: "https://webapp-b7149-default-rtdb.europe-west1.firebasedatabase.app" 
-    };
+    const config = { databaseURL: "https://webapp-b7149-default-rtdb.europe-west1.firebasedatabase.app" };
     firebase.initializeApp(config);
     const rtdb = firebase.database();
 
-    const data = [
+    const menu = [
         { id: 1, cat: 'pizza', name: 'Пепперони', price: 590, ico: '🍕' },
-        { id: 2, cat: 'rolls', name: 'Филадельфия', price: 450, ico: '🍣' },
-        { id: 3, cat: 'shaurma', name: 'Сырная шавуха', price: 220, ico: '🌯' },
-        { id: 4, cat: 'drinks', name: 'Капучино', price: 160, ico: '☕' },
-        { id: 5, cat: 'pizza', name: '4 Сыра', price: 620, ico: '🧀' },
-        { id: 6, cat: 'drinks', name: 'Добрый Кола', price: 95, ico: '🥤' },
-        { id: 7, cat: 'rolls', name: 'Запеченный ролл', price: 380, ico: '🍱' },
+        { id: 2, cat: 'pizza', name: '4 Сыра', price: 620, ico: '🧀' },
+        { id: 3, cat: 'rolls', name: 'Филадельфия', price: 450, ico: '🍣' },
+        { id: 4, cat: 'rolls', name: 'Калифорния', price: 390, ico: '🍱' },
+        { id: 5, cat: 'shaurma', name: 'Классическая', price: 220, ico: '🌯' },
+        { id: 6, cat: 'shaurma', name: 'Сырная', price: 250, ico: '🧀' },
+        { id: 7, cat: 'drinks', name: 'Капучино', price: 160, ico: '☕' },
+        { id: 8, cat: 'drinks', name: 'Добрый Кола', price: 95, ico: '🥤' }
     ];
 
     let cart = [];
     let currentFilter = 'all';
+    let currentUser = null;
 
     function renderProducts() {
         const list = document.getElementById('product-list');
         list.innerHTML = '';
-        data.filter(p => currentFilter === 'all' || p.cat === currentFilter).forEach(p => {
+        menu.filter(p => currentFilter === 'all' || p.cat === currentFilter).forEach(p => {
             list.innerHTML += `
                 <div class="card">
                     <div class="card-img">${p.ico}</div>
                     <div>
-                        <div style="font-size:14px; margin-top:5px">${p.name}</div>
+                        <div style="font-size:14px; margin-top:5px; font-weight:600">${p.name}</div>
                         <div class="card-price">${p.price} ₽</div>
-                        <button class="add-to-cart" onclick="addToCart(${p.id})">Добавить</button>
+                        <button class="add-to-cart" onclick="addToCart(${p.id})">В корзину</button>
                     </div>
                 </div>
             `;
@@ -170,7 +195,7 @@
     }
 
     function addToCart(id) {
-        const item = data.find(p => p.id === id);
+        const item = menu.find(p => p.id === id);
         cart.push(item);
         updateCartBar();
     }
@@ -179,70 +204,88 @@
         const bar = document.getElementById('cart-bar');
         if (cart.length > 0) {
             bar.style.display = 'flex';
-            document.getElementById('cart-count').innerText = cart.length;
             const total = cart.reduce((sum, p) => sum + p.price, 0);
+            document.getElementById('cart-info').innerText = cart.length + " товара";
             document.getElementById('cart-total').innerText = total + " ₽ >";
         }
     }
 
-    function startOrder() {
+    function openAuth() {
         document.getElementById('modal-pay').style.display = 'flex';
-        document.getElementById('auth-section').style.display = 'block';
-        document.getElementById('status-section').style.display = 'none';
+        showStep('step-auth');
     }
 
-    function authAndPay() {
+    function showStep(stepId) {
+        ['step-auth', 'step-confirm', 'step-success'].forEach(s => document.getElementById(s).style.display = 'none');
+        document.getElementById(stepId).style.display = 'block';
+    }
+
+    function checkUser() {
         const inputId = document.getElementById('tg-id-input').value;
-        const total = cart.reduce((sum, p) => sum + p.price, 0);
+        if(!inputId) return alert("Введите ID");
 
         rtdb.ref('clients').once('value', (snapshot) => {
             const users = snapshot.val();
-            let foundUser = null;
-            let userKey = null;
-
+            let found = null;
             for (let key in users) {
                 if (String(users[key].telegramId) === inputId) {
-                    foundUser = users[key];
-                    userKey = key;
+                    found = { ...users[key], fbKey: key };
                     break;
                 }
             }
 
-            if (!foundUser) {
-                alert("ID не найден в системе К-Онлайн!");
-            } else if (foundUser.balance < total) {
-                alert("Недостаточно средств на счете К-Онлайн");
-            } else {
-                processPayment(userKey, foundUser.balance, total);
-            }
+            if (!found) return alert("Пользователь не найден в К-Онлайн");
+            
+            currentUser = found;
+            showConfirmPage();
         });
     }
 
-    function processPayment(key, balance, amount) {
-        const newBalance = balance - amount;
-        rtdb.ref(`clients/${key}`).update({ balance: newBalance }).then(() => {
-            // Запись в историю
-            rtdb.ref(`history/${key}`).push({
-                title: 'Оплата в К-Стор',
-                val: amount,
+    function showConfirmPage() {
+        const details = document.getElementById('order-details');
+        details.innerHTML = '';
+        
+        // Группируем товары для списка
+        cart.forEach(item => {
+            details.innerHTML += `<div class="order-item"><span>${item.ico} ${item.name}</span> <span>${item.price} ₽</span></div>`;
+        });
+
+        const total = cart.reduce((sum, p) => sum + p.price, 0);
+        document.getElementById('user-balance-val').innerText = currentUser.balance.toLocaleString() + " ₽";
+        document.getElementById('order-total-val').innerText = total.toLocaleString() + " ₽";
+        
+        showStep('step-confirm');
+    }
+
+    function executePayment() {
+        const total = cart.reduce((sum, p) => sum + p.price, 0);
+        
+        if (currentUser.balance < total) return alert("Недостаточно средств на балансе!");
+
+        document.getElementById('final-pay-btn').disabled = true;
+        document.getElementById('final-pay-btn').innerText = "Оплата...";
+
+        const newBalance = currentUser.balance - total;
+        
+        rtdb.ref(`clients/${currentUser.fbKey}`).update({ balance: newBalance }).then(() => {
+            rtdb.ref(`history/${currentUser.fbKey}`).push({
+                title: 'Заказ К-Стор',
+                val: total,
                 type: 'minus',
-                ico: '🛍️',
+                ico: '🍕',
                 status: 'done',
                 date: new Date().toLocaleString()
             });
 
-            document.getElementById('auth-section').style.display = 'none';
-            document.getElementById('status-section').style.display = 'block';
-            document.getElementById('status-icon').innerText = '✅';
-            document.getElementById('status-msg').innerText = 'Оплачено!';
             cart = [];
-            updateCartBar();
             document.getElementById('cart-bar').style.display = 'none';
+            showStep('step-success');
         });
     }
 
     function closeModal() {
         document.getElementById('modal-pay').style.display = 'none';
+        currentUser = null;
     }
 
     window.onload = renderProducts;
