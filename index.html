@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>К-Стор & К-Онлайн</title>
+    <title>К-Стор: Доставка и Оплата</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -14,207 +14,238 @@
             --white: #FFFFFF;
             --text-dark: #3A3A3A;
             --soft-gray: #D6E4F0;
+            --accent: #3A3A3A;
             --radius-lg: 30px;
-            --radius-sm: 15px;
+            --radius-sm: 18px;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body {
-            margin: 0; padding: 0;
-            font-family: -apple-system, system-ui, sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-dark);
-            overflow-x: hidden;
+            margin: 0; font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--bg-main); color: var(--text-dark);
         }
 
-        /* --- МАГАЗИН (К-СТОР) --- */
-        .app-container {
-            padding: 20px;
-            padding-bottom: 100px;
+        /* --- К-СТОР ИНТЕРФЕЙС --- */
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .categories {
+            display: flex; gap: 10px; overflow-x: auto; padding: 0 20px 20px;
+            scrollbar-width: none;
         }
+        .cat-btn {
+            background: var(--white); padding: 12px 20px; border-radius: 20px;
+            white-space: nowrap; font-weight: 600; cursor: pointer; border: none;
+        }
+        .cat-btn.active { background: var(--text-dark); color: var(--white); }
 
-        .header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 25px; margin-top: 10px;
+        .products {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 20px 100px;
         }
-
-        .category-scroll {
-            display: flex; gap: 10px; overflow-x: auto;
-            padding-bottom: 15px; scrollbar-width: none;
+        .card {
+            background: var(--white); border-radius: var(--radius-sm); padding: 12px;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
-        .category-item {
-            background: var(--white); padding: 10px 20px;
-            border-radius: 20px; white-space: nowrap; font-size: 14px; font-weight: 600;
-        }
-
-        .product-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-        }
-        .product-card {
-            background: var(--white); border-radius: var(--radius-sm);
-            padding: 15px; display: flex; flex-direction: column; gap: 10px;
-        }
-        .product-img {
+        .card-img {
             width: 100%; aspect-ratio: 1; background: var(--soft-gray);
-            border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px;
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 45px;
         }
-        .product-price { font-weight: 800; font-size: 18px; }
-        .btn-add {
-            background: var(--bg-main); border: none; border-radius: 10px;
-            padding: 8px; font-weight: bold; color: var(--text-dark); cursor: pointer;
+        .card-price { font-weight: 800; font-size: 18px; margin: 8px 0; }
+        .add-to-cart {
+            background: var(--bg-main); border: none; border-radius: 12px;
+            padding: 10px; font-weight: bold; cursor: pointer;
         }
 
-        /* --- ЭКРАН ОПЛАТЫ (К-ОНЛАЙН) --- */
-        #payment-screen {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
-            z-index: 1000; align-items: flex-end;
+        /* --- КОРЗИНА (НИЖНЯЯ ПАНЕЛЬ) --- */
+        .cart-bar {
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            background: var(--text-dark); color: var(--white);
+            border-radius: 20px; padding: 15px 25px;
+            display: none; justify-content: space-between; align-items: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); z-index: 99;
         }
-        .payment-modal {
-            background: var(--white); width: 100%;
-            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-            padding: 40px 25px; animation: slideUp 0.3s ease-out;
-            text-align: center;
+
+        /* --- ЭКРАН ОПЛАТЫ / ВХОДА --- */
+        .modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px); z-index: 1000; align-items: flex-end;
+        }
+        .modal-content {
+            background: var(--white); width: 100%; border-radius: 30px 30px 0 0;
+            padding: 30px; text-align: center; animation: slideUp 0.3s ease;
         }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        .btn-pay {
-            width: 100%; height: 60px; background: var(--bg-main);
-            border: none; border-radius: 20px; font-size: 18px;
-            font-weight: 700; color: var(--text-dark); margin-top: 20px;
+        input {
+            width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--soft-gray);
+            font-size: 16px; margin: 15px 0; text-align: center;
         }
-
-        .balance-badge {
-            background: var(--soft-gray); padding: 10px;
-            border-radius: 10px; display: inline-block; margin-bottom: 20px;
+        .btn-main {
+            width: 100%; padding: 18px; border-radius: 18px; border: none;
+            background: var(--bg-main); font-weight: 700; font-size: 16px; cursor: pointer;
         }
-
-        .close-pay { margin-top: 15px; opacity: 0.5; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="app-container" id="store-page">
     <div class="header">
-        <h1 style="font-size: 28px; margin: 0;">К-Стор 🧺</h1>
-        <div style="font-size: 24px;">🛒</div>
+        <h1 style="margin:0">К-Стор 🥦</h1>
+        <div style="font-size: 24px" onclick="openCart()">🛒</div>
     </div>
 
-    <div class="category-scroll">
-        <div class="category-item">🍎 Фрукты</div>
-        <div class="category-item">🥦 Овощи</div>
-        <div class="category-item">🥐 Выпечка</div>
-        <div class="category-item">🧀 Молоко</div>
+    <div class="categories" id="cat-list">
+        <button class="cat-btn active" onclick="filter('all')">Все</button>
+        <button class="cat-btn" onclick="filter('pizza')">🍕 Пицца</button>
+        <button class="cat-btn" onclick="filter('rolls')">🍣 Роллы</button>
+        <button class="cat-btn" onclick="filter('shaurma')">🌯 Шавуха</button>
+        <button class="cat-btn" onclick="filter('drinks')">☕ Напитки</button>
     </div>
 
-    <div class="product-grid">
-        <div class="product-card">
-            <div class="product-img">🍌</div>
-            <div style="font-size: 14px; opacity: 0.8;">Бананы, 1кг</div>
-            <div class="product-price">149 ₽</div>
-            <button class="btn-add" onclick="openPayment(149, 'Бананы')">Купить</button>
-        </div>
-        <div class="product-card">
-            <div class="product-img">🥐</div>
-            <div style="font-size: 14px; opacity: 0.8;">Круассан</div>
-            <div class="product-price">89 ₽</div>
-            <button class="btn-add" onclick="openPayment(89, 'Круассан')">Купить</button>
-        </div>
-        <div class="product-card">
-            <div class="product-img">🥤</div>
-            <div style="font-size: 14px; opacity: 0.8;">Добрый Кола</div>
-            <div class="product-price">110 ₽</div>
-            <button class="btn-add" onclick="openPayment(110, 'Напиток')">Купить</button>
-        </div>
-        <div class="product-card">
-            <div class="product-img">🍰</div>
-            <div style="font-size: 14px; opacity: 0.8;">Чизкейк</div>
-            <div class="product-price">250 ₽</div>
-            <button class="btn-add" onclick="openPayment(250, 'Чизкейк')">Купить</button>
+    <div class="products" id="product-list"></div>
+
+    <div class="cart-bar" id="cart-bar" onclick="startOrder()">
+        <span>В корзине: <span id="cart-count">0</span></span>
+        <span id="cart-total">0 ₽ ></span>
+    </div>
+
+    <div class="modal" id="modal-pay">
+        <div class="modal-content">
+            <div id="auth-section">
+                <h2>Вход в К-Онлайн</h2>
+                <p style="opacity:0.6">Введите ваш Telegram ID для оплаты</p>
+                <input type="number" id="tg-id-input" placeholder="Например: 6348425176">
+                <button class="btn-main" onclick="authAndPay()">Войти и оплатить</button>
+            </div>
+            
+            <div id="status-section" style="display:none">
+                <div style="font-size: 50px" id="status-icon">⏳</div>
+                <h2 id="status-msg">Обработка...</h2>
+                <button class="btn-main" onclick="closeModal()">Закрыть</button>
+            </div>
+            <div style="margin-top: 15px; opacity: 0.5" onclick="closeModal()">Отмена</div>
         </div>
     </div>
-</div>
-
-<div id="payment-screen">
-    <div class="payment-modal">
-        <div style="font-size: 40px; margin-bottom: 10px;">💳</div>
-        <h2 style="margin: 0 0 10px 0;">К-Онлайн</h2>
-        <div class="balance-badge" id="user-balance">Ваш баланс: ... ₽</div>
-        
-        <div style="margin: 20px 0;">
-            <div style="opacity: 0.6; font-size: 14px;">К оплате в К-Стор</div>
-            <div id="pay-amount" style="font-size: 32px; font-weight: 900;">0 ₽</div>
-        </div>
-
-        <button class="btn-pay" onclick="confirmPayment()">Подтвердить оплату</button>
-        <div class="close-pay" onclick="closePayment()">Отмена</div>
-    </div>
-</div>
 
 <script>
-    // --- КОНФИГ FIREBASE ---
     const config = { 
-        apiKey: "AIzaSyA3J7KnUgxUHZigwRKmndm7xyxJeeLCrxg", 
-        databaseURL: "https://webapp-b7149-default-rtdb.europe-west1.firebasedatabase.app", 
-        projectId: "webapp-b7149" 
+        databaseURL: "https://webapp-b7149-default-rtdb.europe-west1.firebasedatabase.app" 
     };
     firebase.initializeApp(config);
     const rtdb = firebase.database();
 
-    let currentUser = null;
-    let currentAmount = 0;
+    const data = [
+        { id: 1, cat: 'pizza', name: 'Пепперони', price: 590, ico: '🍕' },
+        { id: 2, cat: 'rolls', name: 'Филадельфия', price: 450, ico: '🍣' },
+        { id: 3, cat: 'shaurma', name: 'Сырная шавуха', price: 220, ico: '🌯' },
+        { id: 4, cat: 'drinks', name: 'Капучино', price: 160, ico: '☕' },
+        { id: 5, cat: 'pizza', name: '4 Сыра', price: 620, ico: '🧀' },
+        { id: 6, cat: 'drinks', name: 'Добрый Кола', price: 95, ico: '🥤' },
+        { id: 7, cat: 'rolls', name: 'Запеченный ролл', price: 380, ico: '🍱' },
+    ];
 
-    // Имитируем ID пользователя (в APK/IPA ты можешь брать его из памяти)
-    const USER_ID = "6348425176"; 
+    let cart = [];
+    let currentFilter = 'all';
 
-    // Загрузка баланса
-    function loadUserData() {
-        rtdb.ref('clients').on('value', (snapshot) => {
-            const data = snapshot.val();
-            for (let key in data) {
-                if (String(data[key].telegramId) === USER_ID) {
-                    currentUser = { ...data[key], fbKey: key };
-                    document.getElementById('user-balance').innerText = `Ваш баланс: ${currentUser.balance.toLocaleString()} ₽`;
+    function renderProducts() {
+        const list = document.getElementById('product-list');
+        list.innerHTML = '';
+        data.filter(p => currentFilter === 'all' || p.cat === currentFilter).forEach(p => {
+            list.innerHTML += `
+                <div class="card">
+                    <div class="card-img">${p.ico}</div>
+                    <div>
+                        <div style="font-size:14px; margin-top:5px">${p.name}</div>
+                        <div class="card-price">${p.price} ₽</div>
+                        <button class="add-to-cart" onclick="addToCart(${p.id})">Добавить</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function filter(cat) {
+        currentFilter = cat;
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        renderProducts();
+    }
+
+    function addToCart(id) {
+        const item = data.find(p => p.id === id);
+        cart.push(item);
+        updateCartBar();
+    }
+
+    function updateCartBar() {
+        const bar = document.getElementById('cart-bar');
+        if (cart.length > 0) {
+            bar.style.display = 'flex';
+            document.getElementById('cart-count').innerText = cart.length;
+            const total = cart.reduce((sum, p) => sum + p.price, 0);
+            document.getElementById('cart-total').innerText = total + " ₽ >";
+        }
+    }
+
+    function startOrder() {
+        document.getElementById('modal-pay').style.display = 'flex';
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('status-section').style.display = 'none';
+    }
+
+    function authAndPay() {
+        const inputId = document.getElementById('tg-id-input').value;
+        const total = cart.reduce((sum, p) => sum + p.price, 0);
+
+        rtdb.ref('clients').once('value', (snapshot) => {
+            const users = snapshot.val();
+            let foundUser = null;
+            let userKey = null;
+
+            for (let key in users) {
+                if (String(users[key].telegramId) === inputId) {
+                    foundUser = users[key];
+                    userKey = key;
+                    break;
                 }
+            }
+
+            if (!foundUser) {
+                alert("ID не найден в системе К-Онлайн!");
+            } else if (foundUser.balance < total) {
+                alert("Недостаточно средств на счете К-Онлайн");
+            } else {
+                processPayment(userKey, foundUser.balance, total);
             }
         });
     }
 
-    function openPayment(amount, name) {
-        currentAmount = amount;
-        document.getElementById('pay-amount').innerText = amount + " ₽";
-        document.getElementById('payment-screen').style.display = 'flex';
-    }
-
-    function closePayment() {
-        document.getElementById('payment-screen').style.display = 'none';
-    }
-
-    function confirmPayment() {
-        if (!currentUser) return alert("Ошибка авторизации");
-        if (currentUser.balance < currentAmount) return alert("Недостаточно средств в К-Онлайн");
-
-        const newBalance = currentUser.balance - currentAmount;
-        
-        // Списываем деньги
-        rtdb.ref(`clients/${currentUser.fbKey}`).update({ balance: newBalance })
-        .then(() => {
-            // Добавляем в историю
-            rtdb.ref(`history/${currentUser.fbKey}`).push({
-                title: 'Покупка в К-Стор',
-                val: currentAmount,
+    function processPayment(key, balance, amount) {
+        const newBalance = balance - amount;
+        rtdb.ref(`clients/${key}`).update({ balance: newBalance }).then(() => {
+            // Запись в историю
+            rtdb.ref(`history/${key}`).push({
+                title: 'Оплата в К-Стор',
+                val: amount,
                 type: 'minus',
                 ico: '🛍️',
-                status: 'done'
+                status: 'done',
+                date: new Date().toLocaleString()
             });
-            alert("Оплачено успешно!");
-            closePayment();
+
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('status-section').style.display = 'block';
+            document.getElementById('status-icon').innerText = '✅';
+            document.getElementById('status-msg').innerText = 'Оплачено!';
+            cart = [];
+            updateCartBar();
+            document.getElementById('cart-bar').style.display = 'none';
         });
     }
 
-    window.onload = loadUserData;
-</script>
+    function closeModal() {
+        document.getElementById('modal-pay').style.display = 'none';
+    }
 
+    window.onload = renderProducts;
+</script>
 </body>
 </html>
