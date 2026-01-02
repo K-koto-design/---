@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>К-Стор & К-Онлайн</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #A2C0D4;
+            --white: #FFFFFF;
+            --text-dark: #3A3A3A;
+            --soft-gray: #D6E4F0;
+            --radius-lg: 30px;
+            --radius-sm: 15px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* --- МАГАЗИН (К-СТОР) --- */
+        .app-container {
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; margin-top: 10px;
+        }
+
+        .category-scroll {
+            display: flex; gap: 10px; overflow-x: auto;
+            padding-bottom: 15px; scrollbar-width: none;
+        }
+        .category-item {
+            background: var(--white); padding: 10px 20px;
+            border-radius: 20px; white-space: nowrap; font-size: 14px; font-weight: 600;
+        }
+
+        .product-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+        }
+        .product-card {
+            background: var(--white); border-radius: var(--radius-sm);
+            padding: 15px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .product-img {
+            width: 100%; aspect-ratio: 1; background: var(--soft-gray);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 40px;
+        }
+        .product-price { font-weight: 800; font-size: 18px; }
+        .btn-add {
+            background: var(--bg-main); border: none; border-radius: 10px;
+            padding: 8px; font-weight: bold; color: var(--text-dark); cursor: pointer;
+        }
+
+        /* --- ЭКРАН ОПЛАТЫ (К-ОНЛАЙН) --- */
+        #payment-screen {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
+            z-index: 1000; align-items: flex-end;
+        }
+        .payment-modal {
+            background: var(--white); width: 100%;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            padding: 40px 25px; animation: slideUp 0.3s ease-out;
+            text-align: center;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .btn-pay {
+            width: 100%; height: 60px; background: var(--bg-main);
+            border: none; border-radius: 20px; font-size: 18px;
+            font-weight: 700; color: var(--text-dark); margin-top: 20px;
+        }
+
+        .balance-badge {
+            background: var(--soft-gray); padding: 10px;
+            border-radius: 10px; display: inline-block; margin-bottom: 20px;
+        }
+
+        .close-pay { margin-top: 15px; opacity: 0.5; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="store-page">
+    <div class="header">
+        <h1 style="font-size: 28px; margin: 0;">К-Стор 🧺</h1>
+        <div style="font-size: 24px;">🛒</div>
+    </div>
+
+    <div class="category-scroll">
+        <div class="category-item">🍎 Фрукты</div>
+        <div class="category-item">🥦 Овощи</div>
+        <div class="category-item">🥐 Выпечка</div>
+        <div class="category-item">🧀 Молоко</div>
+    </div>
+
+    <div class="product-grid">
+        <div class="product-card">
+            <div class="product-img">🍌</div>
+            <div style="font-size: 14px; opacity: 0.8;">Бананы, 1кг</div>
+            <div class="product-price">149 ₽</div>
+            <button class="btn-add" onclick="openPayment(149, 'Бананы')">Купить</button>
+        </div>
+        <div class="product-card">
+            <div class="product-img">🥐</div>
+            <div style="font-size: 14px; opacity: 0.8;">Круассан</div>
+            <div class="product-price">89 ₽</div>
+            <button class="btn-add" onclick="openPayment(89, 'Круассан')">Купить</button>
+        </div>
+        <div class="product-card">
+            <div class="product-img">🥤</div>
+            <div style="font-size: 14px; opacity: 0.8;">Добрый Кола</div>
+            <div class="product-price">110 ₽</div>
+            <button class="btn-add" onclick="openPayment(110, 'Напиток')">Купить</button>
+        </div>
+        <div class="product-card">
+            <div class="product-img">🍰</div>
+            <div style="font-size: 14px; opacity: 0.8;">Чизкейк</div>
+            <div class="product-price">250 ₽</div>
+            <button class="btn-add" onclick="openPayment(250, 'Чизкейк')">Купить</button>
+        </div>
+    </div>
+</div>
+
+<div id="payment-screen">
+    <div class="payment-modal">
+        <div style="font-size: 40px; margin-bottom: 10px;">💳</div>
+        <h2 style="margin: 0 0 10px 0;">К-Онлайн</h2>
+        <div class="balance-badge" id="user-balance">Ваш баланс: ... ₽</div>
+        
+        <div style="margin: 20px 0;">
+            <div style="opacity: 0.6; font-size: 14px;">К оплате в К-Стор</div>
+            <div id="pay-amount" style="font-size: 32px; font-weight: 900;">0 ₽</div>
+        </div>
+
+        <button class="btn-pay" onclick="confirmPayment()">Подтвердить оплату</button>
+        <div class="close-pay" onclick="closePayment()">Отмена</div>
+    </div>
+</div>
+
+<script>
+    // --- КОНФИГ FIREBASE ---
+    const config = { 
+        apiKey: "AIzaSyA3J7KnUgxUHZigwRKmndm7xyxJeeLCrxg", 
+        databaseURL: "https://webapp-b7149-default-rtdb.europe-west1.firebasedatabase.app", 
+        projectId: "webapp-b7149" 
+    };
+    firebase.initializeApp(config);
+    const rtdb = firebase.database();
+
+    let currentUser = null;
+    let currentAmount = 0;
+
+    // Имитируем ID пользователя (в APK/IPA ты можешь брать его из памяти)
+    const USER_ID = "6348425176"; 
+
+    // Загрузка баланса
+    function loadUserData() {
+        rtdb.ref('clients').on('value', (snapshot) => {
+            const data = snapshot.val();
+            for (let key in data) {
+                if (String(data[key].telegramId) === USER_ID) {
+                    currentUser = { ...data[key], fbKey: key };
+                    document.getElementById('user-balance').innerText = `Ваш баланс: ${currentUser.balance.toLocaleString()} ₽`;
+                }
+            }
+        });
+    }
+
+    function openPayment(amount, name) {
+        currentAmount = amount;
+        document.getElementById('pay-amount').innerText = amount + " ₽";
+        document.getElementById('payment-screen').style.display = 'flex';
+    }
+
+    function closePayment() {
+        document.getElementById('payment-screen').style.display = 'none';
+    }
+
+    function confirmPayment() {
+        if (!currentUser) return alert("Ошибка авторизации");
+        if (currentUser.balance < currentAmount) return alert("Недостаточно средств в К-Онлайн");
+
+        const newBalance = currentUser.balance - currentAmount;
+        
+        // Списываем деньги
+        rtdb.ref(`clients/${currentUser.fbKey}`).update({ balance: newBalance })
+        .then(() => {
+            // Добавляем в историю
+            rtdb.ref(`history/${currentUser.fbKey}`).push({
+                title: 'Покупка в К-Стор',
+                val: currentAmount,
+                type: 'minus',
+                ico: '🛍️',
+                status: 'done'
+            });
+            alert("Оплачено успешно!");
+            closePayment();
+        });
+    }
+
+    window.onload = loadUserData;
+</script>
+
+</body>
+</html>
